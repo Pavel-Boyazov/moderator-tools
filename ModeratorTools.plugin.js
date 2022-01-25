@@ -111,7 +111,7 @@ class ModeratorTools {
 				  	}
 				}
 			})
-		} else if (ZLibrary.PluginUpdater.defaultComparator(BdApi.getData("ZeresPluginLibrary", "currentVersionInfo").version, "1.2.33")) {
+		} else if (ZLibrary.PluginUpdater.defaultComparator(BdApi.getData("ZeresPluginLibrary", "currentVersionInfo").version, "2.0.0")) {
 			BdApi.showConfirmationModal("Требуется обновить библиотеку",
 			[
 				"У вас устарела библиотека ZeresPluginLibrary без которой невозможно использование данного плагина.",
