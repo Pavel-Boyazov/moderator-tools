@@ -1,6 +1,6 @@
 /**
  * @name ModeratorTools
- * @version 0.9.7
+ * @version 0.9.8
  * @author Pavel_Boyazov
  * @authorId 328529082159464448
  * @authorLink https://vk.com/Pavel_Boyazov
@@ -28,7 +28,7 @@ class ModeratorTools {
 	}
 
 	getVersion () {
-		return "0.9.7";
+		return "0.9.8";
 	}
 
 	getAuthor () {
@@ -48,27 +48,17 @@ class ModeratorTools {
 	}
 
 	showChangeLog () {
-		// return ZLibrary.Modals.showChangelogModal("Новое обновление ModeratorTools!", this.getVersion(), [
-		// 	{
-		// 		title: "Добавлено",
-		// 		items: [
-		// 			"Если версия плагина меньше чем требуемая для конфига, он не загружается.",
-		// 			"Конфиг может обновляться автоматически! Как тебе такое, Илон Маск?",
-		// 			"Если в настройках сменить должность на нужную, то сразу появится чекбокс с предложением включить формы. А раньше в настройки перезаходили..."
-		// 		]
-		// 	},
-		// 	{
-		// 		title: "Исправлено",
-		// 		type: "",
-		// 		items: [
-		// 			"Стили элементов заменены на рабочие.",
-		// 			"При первоначальной настройке плагина при выборе должности, на следующее окно можно переключиться простым нажатием Enter.",
-		// 			"После принятия/отказа формы теперь не надо закрывать панель, которая и так была закрыта.",
-		// 			"Если в канале установлен медленный режим, а вы сама скорость - выйдет соответствующая ошибка. Не гоняйте, пацаны!"
-		// 		]
-		// 	}
-		// ])
-		BdApi.showToast("ChangeLog временно не работает :(", { type: "warning" })
+		return ZLibrary.Modals.showChangelogModal("Новое обновление ModeratorTools!", this.getVersion(), [
+			{
+				title: "Исправлено",
+				type: "fixed",
+				items: [
+					"Плагин снова работает, ChangeLog снова виден!",
+					"В случае если у вас версия билиотеки не соответствует минимально требуемой, вам предложат обновиться.",
+					"Тестировщики теперь могут обновляться лишь до предварительных версий."
+				]
+			}
+		])
 	}
 
 	async load () {
@@ -121,7 +111,54 @@ class ModeratorTools {
 				  	}
 				}
 			})
-		}
+		} else if (ZLibrary.PluginUpdater.defaultComparator(BdApi.getData("ZeresPluginLibrary", "currentVersionInfo").version, "1.2.33")) {
+			BdApi.showConfirmationModal("Требуется обновить библиотеку",
+			[
+				"У вас устарела библиотека ZeresPluginLibrary без которой невозможно использование данного плагина.",
+				'Нажмите кнопку "Обновить" чтобы обновить библиотеку.'
+			],
+			{
+				confirmText: "Обновить",
+				cancelText: "Отмена",
+				onCancel: _ => {
+					new ModeratorTools().stop()
+					return BdApi.Plugins.disable('ModeratorTools')
+				},
+				onConfirm: _ => {
+					function manualLoad() {
+						BdApi.alert("Требуется обновить библиотеку", BdApi.React.createElement("span", {
+							style: {
+							  color: "white"
+							}
+						  }, `Что-то пошло не так! Вам придётся загрузить библиотеку вручную. Ошибку можно увидеть в консоли.`, BdApi.React.createElement("div", {}, BdApi.React.createElement("a", {
+							href: "https://betterdiscord.net/ghdl?id=2252",
+							target: "_blank"
+						  }, "Нажмите сюда для загрузки ZeresPluginLibrary"))));
+					}
+					const fs = require("fs"),
+					path = require("path")
+					let ZLraw = pasteMessage.requestData("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js")
+					try {
+						fs.writeFile(path.join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), ZLraw, (err) => {
+							if (err) {
+								console.error(err)
+								BdApi.showToast("Произошла ошибка при записи файла. Сообщите мне vk.com/Pavel_Boyazov");
+								new ModeratorTools().stop()
+								return BdApi.Plugins.disable('ModeratorTools')
+							}
+							setTimeout(() => {
+								BdApi.Plugins.reload(this.getName())
+								BdApi.Plugins.enable('ModeratorTools')
+							}, 1000)
+						})
+					} catch (err) {
+						console.error("Критическая ошибка при загрузке ZeresPluginLibrary", err), manualLoad()
+						new ModeratorTools().stop()
+						return BdApi.Plugins.disable('ModeratorTools')
+				  	}
+				}
+			})
+		};
 
 		if (!this.getData("user") && global.ZeresPluginLibrary) {
 
@@ -402,7 +439,7 @@ class ModeratorTools {
 					};
 				}, 5000);
 			}
-		} else ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Pavel-Boyazov/moderator-tools/main/ModeratorTools.plugin.js");
+		} else if (!dev || !this.getData("user")?.token) ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Pavel-Boyazov/moderator-tools/main/ModeratorTools.plugin.js");
 
 		// Отображение ChangeLog'a
 		if ((this.getData("info")?.version != this.getVersion() || !this.getData("info")?.changeLog) && this.getData("info")) {
@@ -479,7 +516,7 @@ class ModeratorTools {
 					}, 20000)
 				} else {
 					let message_id = e.target.parentNode.getAttribute("id").slice(17)
-					let channel_id = ZLibrary.DiscordAPI.currentChannel.discordObject.id
+					let channel_id = ZLibrary.DiscordModules.SelectedChannelStore.getChannelId()
 					saved_id = JSON.parse(pasteMessage.requestData(`/api/v9/channels/${channel_id}/messages?limit=1&around=${message_id}`))[0].author.id
 					BdApi.showToast(`ID ${saved_id} сохранён!`, { type: "success" })
 					clearTimeout(this.timeout)
@@ -528,7 +565,8 @@ class ModeratorTools {
 				if (folders[name].includes(command[0])) {
 					usedButttons.push(command)
 					if (createdFolders.includes(name)) return;
-					if (!ZLibrary.DiscordAPI.currentChannel.discordObject.name.startsWith(command[1].require || "")) return;
+					if (!ZLibrary.DiscordModules.ChannelStore.getChannel(
+						ZLibrary.DiscordModules.SelectedChannelStore.getChannelId()).name.startsWith(command[1].require || "")) return;
 					let button = GUI.newButton("📁 " + name)
 					button.style.flexGrow = "1"
 					button.style.margin = "3px"
@@ -866,7 +904,7 @@ const pasteMessage = {
 	request: (type, args = { message: "", user: "", role: "", channel: "", reaction: ""}) => {
 		let req = new XMLHttpRequest();
 		let method = "POST"
-		let url = `/api/v9/channels/${args.channel || ZLibrary.DiscordAPI.currentChannel.discordObject.id}/messages`
+		let url = `/api/v9/channels/${args.channel || ZLibrary.DiscordModules.SelectedChannelStore.getChannelId()}/messages`
 		if (type == "role") {
 			method = "PUT"
 			url = `/api/v9/guilds/${document.URL.split('/')[4]}/members/${args.user}/roles/${args.role}`
@@ -894,7 +932,7 @@ const pasteMessage = {
 			let strings = content.split("\n")
 			new ModeratorTools().stopButton()
 			var i = -1;
-			var channel = ZLibrary.DiscordAPI.currentChannel.discordObject.id
+			var channel = ZLibrary.DiscordModules.SelectedChannelStore.getChannelId()
 			this.flood = setInterval(() => {
 				i++
 				if (i == strings.length) {
@@ -1048,7 +1086,7 @@ const GUI = {
 							values["raw_content"] = allInputs.value.trim()
 							if (values["raw_content"] == "") return BdApi.showToast("Необходимо заполнить все поля!", { type: "error" })
 							if (!values["raw_content"].toLowerCase().startsWith(commandConfig.check)) return BdApi.showToast("Введены данные неверного формата!", { type: "error" })
-							let channel = JSON.parse(pasteMessage.requestData(`/api/v9/channels/${ZLibrary.DiscordAPI.currentChannel.discordObject.id}`))
+							let channel = JSON.parse(pasteMessage.requestData(`/api/v9/channels/${ZLibrary.DiscordModules.SelectedChannelStore.getChannelId()}`))
 							BdApi.showConfirmationModal("Предупреждение!", [`Вы уверены что хотите запустить флудер в канал **#${channel.name}**?`], {
 								danger: true,
 								confirmText: "Да!",
